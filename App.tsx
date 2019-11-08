@@ -3,7 +3,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import ApiKeys from './src/constants/ApiKeys';
 import * as firebase from 'firebase';
 import HeaderApp from './src/components/HeaderApp';
-
+import SwitchNavigator from './navigation/SwitchNavigator';
 
 export default class App extends React.Component {
   constructor(props) {
@@ -13,7 +13,7 @@ export default class App extends React.Component {
   }
   render(){
   return (
-      <HeaderApp/>
+      <SwitchNavigator/>
   );
 }}
 

@@ -3,80 +3,80 @@ import {
     View,
     Text,
     StyleSheet,
-    TextInput,
-    Button
+    TouchableHighlight
 } from "react-native";
 import Main from "../../Main";
-import firebase from 'firebase';
+import firebase, { database } from 'firebase';
 import * as Google from 'expo-google-app-auth';
+import { Input, Button, Header, Icon} from 'react-native-elements';
+
 
 class Register extends Component<any> {
-    state = {
-        name: '',
-        email:'',
-        password: ''
-    }
+  state = {
+    name: '',
+    email:'',
+    password: ''
+  }
 
-    handleSignup = () => {
-        const { email, password} = this.state
-
+  handleSignup = () => {
+    const {email, password} = this.state
+    firebase
+      .auth()
+      .createUserWithEmailAndPassword(email, password)
+      .then(function(result) {
         firebase
-            .auth()
-            .createUserWithEmailAndPassword(email, password)
-            .then(
-            )
-            
-            .catch(error => console.log(error))
+        .database()
+        .ref('/users/' + result.user.uid)
+        .set({
+          mail: result.user.email,
+          created_at: (new Date())
+        })
+        this.props.navigation.navigate('Main', {user: result.user.uid})
+      })
+      .catch(error => console.log(error))
     }
 
-    isUserEqual = (googleUser, firebaseUser) => {
-        if (firebaseUser) {
-          var providerData = firebaseUser.providerData;
-          for (var i = 0; i < providerData.length; i++) {
-            if (providerData[i].providerId === firebase.auth.GoogleAuthProvider.PROVIDER_ID &&
+  isUserEqual = (googleUser, firebaseUser) => {
+    if (firebaseUser) {
+      var providerData = firebaseUser.providerData;
+      for (var i = 0; i < providerData.length; i++) {
+        if (providerData[i].providerId === firebase.auth.GoogleAuthProvider.PROVIDER_ID &&
                 providerData[i].uid === googleUser.getBasicProfile().getId()) {
               // We don't need to reauth the Firebase connection.
-              return true;
-            }
-          }
+        return true;
         }
-        return false;
       }
+    }
+    return false;
+  }
 
-    onSignIn = (googleUser) => {
-        console.log('Google Auth Response', googleUser);
-        // We need to register an Observer on Firebase Auth to make sure auth is initialized.
-        var unsubscribe = firebase.auth().onAuthStateChanged(function(firebaseUser) {
-          unsubscribe();
-          // Check if we are already signed-in Firebase with the correct user.
-          if (!this.isUserEqual(googleUser, firebaseUser)) {
-            // Build Firebase credential with the Google ID token.
-            var credential = firebase.auth.GoogleAuthProvider.credential(
-                 //ma kanskje endre id token
-                
-                googleUser.idToken,
-                googleUser.accessToken
-            );
-            // Sign in with credential from the Google user.
+  onSignIn = (googleUser) => {
+    console.log('Google Auth Response', googleUser);
+    // We need to register an Observer on Firebase Auth to make sure auth is initialized.
+    var unsubscribe = firebase.auth().onAuthStateChanged(function(firebaseUser) {
+      unsubscribe();
+      // Check if we are already signed-in Firebase with the correct user.
+      if (!this.isUserEqual(googleUser, firebaseUser)) {
+        // Build Firebase credential with the Google ID token.
+        var credential = firebase.auth.GoogleAuthProvider.credential(
+          //ma kanskje endre id token
+          googleUser.idToken,
+          googleUser.accessToken
+          );
+          // Sign in with credential from the Google user.
+          firebase
+            .auth()
+            .signInWithCredential(credential)
+            .then(function(result) {
             firebase
-                .auth()
-                .signInWithCredential(credential)
-                .then(function(result) {
-                firebase
-                    .auth()
-                    .signInAndRetrieveDataWithCredential(credential)
-                    .then(function(result) {
-                    console.log('user signed in ');
-                    firebase
-                        .database()
-                        .ref('/users/' + result.user.uid)
-                        .set({
-                          gmail: result.user.email,
-                          profile_picture: result.additionalUserInfo.profile,
-                          created_at: Date.now()
-                        })
-                  })
+              .database()
+              .ref('/users/' + result.user.uid)
+              .set({
+                gmail: result.user.email,
+                created_at: (new Date())
+              })              
             })
+            .then(() => this.props.navigation.navigate('Main'))
             .catch(function(error) {
               // Handle Errors here.
               var errorCode = error.code;
@@ -96,11 +96,10 @@ class Register extends Component<any> {
     signInWithGoogleAsync = async() => {
         try {
           const result = await Google.logInAsync({
-            clientId: '1052881175304-390qapid19bugq6ee1t926o7ilniorru.apps.googleusercontent.com',
+            clientId: '145090313122-nfem2tqoupjp2r53enqason5ni5mtpuv.apps.googleusercontent.com',
             scopes: ['profile', 'email'],
             behavior: 'web'
           });
-      
             if (result.type === 'success') {
                 this.onSignIn(result); //send user to signIn to registrate
                 this.props.navigation.navigate('Main');
@@ -114,33 +113,49 @@ class Register extends Component<any> {
     }
 
 
+    goBack = () =>{
+      this.props.navigation.navigate('Login')
+    }
+
     render() {
         return (
-            <View style={styles.container}>
-                <Text>Register</Text>
-                <TextInput
+          <View style={styles.container}>
+            <Header
+                  centerComponent={{ text: 'Register New User', style: { color: 'grey' } }}
+                  leftComponent={
+                  <TouchableHighlight onPress={this.goBack}>
+                    <Text style={{textDecorationLine: 'underline', color: 'grey'}}>Back</Text>
+                  </TouchableHighlight>}
+                  containerStyle={{
+                    backgroundColor: '#D3D3D3',
+                    justifyContent: 'space-around',
+                    
+                  }}
+                  />
+            <View style={styles.content}>
+                <Text style = {{fontSize: 40, color: 'grey'}}>Register</Text>
+                <Input
                     value={this.state.name}
                     onChangeText={ name => this.setState({ name })}
                     placeholder='name'
                 />
-                <TextInput
+                <Input
                     value={this.state.email}
                     onChangeText={ email => this.setState({ email })}
                     placeholder='email'
                     autoCapitalize='none'
                 />
-                <TextInput
+                <Input
                     value={this.state.password}
                     onChangeText={ password => this.setState({ password })}
                     placeholder='password'
                     secureTextEntry={true}
                 />
                 <Button 
-                    title="Sign Up" onPress={() => this.handleSignup()}>
+                    title="Sign Up" onPress={() => this.handleSignup()}
+                    buttonStyle={{borderRadius: 4, backgroundColor:'#3cb371', margin: 5}}>
                 </Button>
-                <Button 
-                    title="Sign Up With Google" onPress={() => this.signInWithGoogleAsync()}>
-                </Button>
+            </View>
             </View>
         );
     }
@@ -148,9 +163,15 @@ class Register extends Component<any> {
 export default Register;
 
 const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        alignItems: 'center',
-        justifyContent: 'center'
+  container: {
+    flex: 1,
+    backgroundColor: '#D3D3D3'
+  },
+    content: {
+      flex: 1,
+      padding: 40,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: '#D3D3D3'
     }
 });
